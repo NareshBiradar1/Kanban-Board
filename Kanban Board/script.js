@@ -10,18 +10,16 @@ let isDeleteActive = false;
 
 let allFilterColor = document.querySelector(".toolbox-priority-cont");
 let allTasks=[];
+let pColor = "red";
+let prioritySelector = document.querySelector(".priority-color-cont");
 
 function loadDataFromLocalStorage(){
     let savedTasks = JSON.parse(localStorage.getItem('tasks'));
     console.log(savedTasks);
 
-    // for(let x=0;x<savedTasks.length;x++){
-    //     allTasks.push(savedTasks[x]);
-    // }
-    
-    // for(let x=0;x<allTasks.length;x++){
-    //     console.log(allTasks[x]);
-    // }
+    for(let x=0;x<savedTasks.length;x++){
+        generateTicket(savedTasks[x].task,savedTasks[x].color,savedTasks[x].id);
+    }
 }
 
 loadDataFromLocalStorage();
@@ -36,9 +34,6 @@ add.addEventListener('click', function (e) {
         addTask.style.display = "none";
     addModal = !addModal;
 })
-
-let pColor = "red";
-let prioritySelector = document.querySelector(".priority-color-cont");
 
 prioritySelector.addEventListener('click', function (e) {
     if (e.target.classList[0] != 'priority-color-cont') {
@@ -61,34 +56,32 @@ textArea.addEventListener('keydown', function (e) {
             alert("please enter some task");
             return;
         }
-        generateTicket(textArea.value)
+        generateTicket(textArea.value,pColor)
         textArea.value = "";
         addModal = true;
         addTask.style.display = "none";
     }
 })
 
-function generateTicket(task) {
+function generateTicket(task,prioritycolor,id) {
     let ticketCont = document.createElement("div");
     ticketCont.className = "ticket-cont";
     let ID;
-    // if(id){
-    //     ID=id;
-    // }
-    // else{
-    //     var uid = new ShortUniqueId();
-    //     ID = "#" + uid.rnd();
-    // }
-    var uid = new ShortUniqueId();
-    ID = "#" + uid.rnd();
+    if(id){
+        ID=id;
+    }
+    else{
+        var uid = new ShortUniqueId();
+        ID = "#" + uid.rnd();
+    }
     
-    ticketCont.innerHTML = `<div class="ticket-color ${pColor}"></div>
+    ticketCont.innerHTML = `<div class="ticket-color ${prioritycolor}"></div>
                                 <div class="ticket-id">${ID}</div>
                                 <div class="ticket-area contenteditable='true'">${task}</div>
                                 <div class="lock-unlock"><i class="fa-solid fa-lock"></i></div>`
     mainBody.append(ticketCont);
 
-    allTasks.push({id:ID,color:pColor,task:task});
+    allTasks.push({id:ID,color:prioritycolor,task:task});
     
 
     let colorArray = ["red", "blue", "green", "pink"];
@@ -96,16 +89,24 @@ function generateTicket(task) {
 
     for (let k = 0; k < taskBoxesHeaders.length; k++) {
         taskBoxesHeaders[k].addEventListener('click', function () {
+            let ticketID = (taskBoxesHeaders[k].nextElementSibling.innerHTML);
 
             let indexOfTicketColor = colorArray.indexOf(taskBoxesHeaders[k].classList[1]);
 
             let oldClass = taskBoxesHeaders[k].classList[1];
             let newClass = colorArray[(indexOfTicketColor + 1) % 4];
             taskBoxesHeaders[k].classList.replace(oldClass, newClass);
+
+            for(let x=0;x<allTasks.length;x++){
+                if(allTasks[x].id==ticketID){
+                    allTasks[x].color = newClass;
+                }
+            }
+
         })
     }
 
-
+    // UPDATING TASK BY OPENING LOCK 
 
     let lockBtn = ticketCont.querySelector(".lock-unlock i");
     lockBtn.addEventListener('click', function () {
@@ -114,6 +115,15 @@ function generateTicket(task) {
         if (lockBtnClass == "fa-lock-open") {
             lockBtn.classList.replace("fa-lock-open", "fa-lock");
             taskInputArea.contentEditable = 'false';
+
+            let taskContent = (lockBtn.parentElement.previousElementSibling.innerHTML);
+            let ticketID = (lockBtn.parentElement.previousElementSibling.previousElementSibling.innerHTML);
+
+            for(let x=0;x<allTasks.length;x++){
+                if(allTasks[x].id==ticketID){
+                    allTasks[x].task = taskContent;
+                }
+            }
         }
         else {
             lockBtn.classList.replace("fa-lock", "fa-lock-open");
@@ -122,8 +132,20 @@ function generateTicket(task) {
     })
 
     ticketCont.addEventListener('click', function () {
-        if (isDeleteActive) ticketCont.remove();
+        if (isDeleteActive){
+            let ticketID = ticketCont.querySelector(".ticket-id").innerHTML;
+
+            for(let x=0;x<allTasks.length;x++){
+                if(allTasks[x].id==ticketID){
+                    allTasks.splice(x,1);
+                }
+            }
+            ticketCont.remove();
+            
+        }
     })
+
+    //FILTERING TICKETS BASED ON PRIORITYCOLOR
 
     allFilterColor.addEventListener('click',function(e){
         if(e.target.classList[0]=="color"){
